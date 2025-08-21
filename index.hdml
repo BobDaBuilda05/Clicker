@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Balanced Clicker Game</title>
+  <title>Clicker Game with Leaderboard</title>
   <style>
     body {
       text-align: center;
@@ -35,13 +35,6 @@
       background: #16a085;
       transform: scale(1.05);
     }
-    button {
-      margin: 10px;
-      padding: 12px 25px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
     .upgrade {
       background: #444;
       border: 2px solid #888;
@@ -68,14 +61,35 @@
       font-size: 20px;
       border-radius: 10px;
     }
-    h2 {
-      color: lightgreen;
+    #leaderboard {
+      margin-top: 30px;
+      background: #111;
+      border: 2px solid #555;
+      padding: 15px;
+      border-radius: 10px;
+      width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #leaderboard h2 {
+      color: gold;
+    }
+    #leaderboard p {
+      font-size: 18px;
+    }
+    button.resetBtn {
+      background: red;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 10px;
+      cursor: pointer;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
-  <h1>⚡ Balanced Clicker Game ⚡</h1>
-  <p>Click, upgrade, prestige, and unlock permanent boosts!</p>
+  <h1>⚡ Clicker Game with Leaderboard ⚡</h1>
 
   <div id="score">Score: 0</div>
 
@@ -88,138 +102,105 @@
 
   <button id="clickBtn" onclick="addPoint()">CLICK ME!</button>
 
-  <div id="upgradeSection">
-    <h2>Upgrades</h2>
-    <!-- Tier 1 -->
-    <button id="upgrade1" class="upgrade" onclick="buyUpgrade('upgrade1')">🖱️ +1 Click Power (Cost: 50)</button>
-    <button id="upgrade2" class="upgrade" onclick="buyUpgrade('upgrade2')">⚡ Auto Clicker +1/sec (Cost: 200)</button>
-    <button id="upgrade3" class="upgrade" onclick="buyUpgrade('upgrade3')">🔥 Super Clicker +10/click (Cost: 1000)</button>
+  <h2>Upgrades</h2>
+  <button id="upgrade1" class="upgrade" onclick="buyUpgrade('upgrade1')">+1 Click Power (Cost: 50)</button>
+  <button id="upgrade2" class="upgrade" onclick="buyUpgrade('upgrade2')">+1 Auto Click/sec (Cost: 200)</button>
+  <button id="upgrade3" class="upgrade" onclick="buyUpgrade('upgrade3')">+10/click (Cost: 1000)</button>
 
-    <!-- Tier 2 -->
-    <button id="upgrade4" class="upgrade" onclick="buyUpgrade('upgrade4')">🚀 Mega Auto Clicker +20/sec (Cost: 10000)</button>
-    <button id="upgrade5" class="upgrade" onclick="buyUpgrade('upgrade5')">🌟 Golden Clicks ×10 (30s) (Cost: 50000)</button>
-    <button id="upgrade6" class="upgrade" onclick="buyUpgrade('upgrade6')">🏭 Factory Auto +100/sec (Cost: 250000)</button>
+  <button id="prestigeBtn" onclick="prestige()">🏆 Prestige</button>
 
-    <!-- Tier 3 -->
-    <button id="upgrade7" class="upgrade" onclick="buyUpgrade('upgrade7')">🛸 Quantum Clicker +100/click (Cost: 5000000)</button>
-    <button id="upgrade8" class="upgrade" onclick="buyUpgrade('upgrade8')">🔮 Hyper Auto Clicker +1000/sec (Cost: 25000000)</button>
-    <button id="upgrade9" class="upgrade" onclick="buyUpgrade('upgrade9')">🌌 Cosmic Clicker +10000/click (Cost: 100000000)</button>
-
-    <!-- Tier 4 -->
-    <button id="upgrade10" class="upgrade" onclick="buyUpgrade('upgrade10')">⚡ Infinity Engine +50000/sec (Cost: 500000000)</button>
-    <button id="upgrade11" class="upgrade" onclick="buyUpgrade('upgrade11')">🌠 Eternal Clicks ×50 (60s) (Cost: 750000000)</button>
-  </div>
-
-  <button id="prestigeBtn" onclick="prestige()">🏆 Prestige! Reset & Gain Bonus</button>
-
-  <div id="prestigeShop">
-    <h2>Prestige Shop</h2>
-    <button id="pUpgrade1" class="upgrade" onclick="buyPrestigeUpgrade(1)">✨ Permanent +1 Click Power (Cost: 5 PP)</button>
-    <button id="pUpgrade2" class="upgrade" onclick="buyPrestigeUpgrade(2)">⚡ Permanent +1 Auto Click/sec (Cost: 10 PP)</button>
-    <button id="pUpgrade3" class="upgrade" onclick="buyPrestigeUpgrade(3)">💰 Upgrades 20% Cheaper (Cost: 20 PP)</button>
-    <button id="pUpgrade4" class="upgrade" onclick="buyPrestigeUpgrade(4)">🌟 Golden Clicks Last 60s (Cost: 15 PP)</button>
+  <!-- Leaderboard Section -->
+  <div id="leaderboard">
+    <h2>🏆 Leaderboard</h2>
+    <p id="bestScore">Best Score: 0</p>
+    <p id="totalPrestige">Total Prestige Points: 0</p>
+    <button class="resetBtn" onclick="resetLeaderboard()">Reset Leaderboard</button>
   </div>
 
   <script>
     let score = 0;
     let clickPower = 1;
     let autoClick = 0;
-    let goldenActive = false;
-
-    // Prestige
     let prestigePoints = 0;
     let multiplier = 1;
-    const prestigeRequirement = 10000000; // 10M per PP
 
-    let prestigeBoosts = { clickBoost: 0, autoBoost: 0, cheaper: false, goldenLonger: false };
+    const prestigeRequirement = 10000000;
+
+    // Load leaderboard data from localStorage
+    let bestScore = parseInt(localStorage.getItem("bestScore")) || 0;
+    let totalPrestige = parseInt(localStorage.getItem("totalPrestige")) || 0;
 
     let upgrades = {
       upgrade1: { cost: 50, effect: () => clickPower += 1 },
       upgrade2: { cost: 200, effect: () => autoClick += 1 },
-      upgrade3: { cost: 1000, effect: () => clickPower += 10 },
-      upgrade4: { cost: 10000, effect: () => autoClick += 20 },
-      upgrade5: { cost: 50000, effect: () => activateGolden(30000) },
-      upgrade6: { cost: 250000, effect: () => autoClick += 100 },
-      upgrade7: { cost: 5000000, effect: () => clickPower += 100 },
-      upgrade8: { cost: 25000000, effect: () => autoClick += 1000 },
-      upgrade9: { cost: 100000000, effect: () => clickPower += 10000 },
-      upgrade10: { cost: 500000000, effect: () => autoClick += 50000 },
-      upgrade11: { cost: 750000000, effect: () => activateGolden(60000, true) }
+      upgrade3: { cost: 1000, effect: () => clickPower += 10 }
     };
 
     function addPoint() {
-      let points = goldenActive ? clickPower * 10 : clickPower;
-      score += points * multiplier;
+      score += clickPower * multiplier;
       updateStats();
     }
 
-    function calculateAuto() {
-      let totalAuto = autoClick + prestigeBoosts.autoBoost;
-      if(goldenActive) totalAuto *= (upgrades.upgrade11 ? 50 : 10);
-      return totalAuto * multiplier;
-    }
-
     setInterval(() => {
-      score += calculateAuto();
+      score += autoClick * multiplier;
       updateStats();
     }, 1000);
 
     function updateStats() {
       document.getElementById("score").innerText = "Score: " + score.toLocaleString();
       document.getElementById("clickPowerStat").innerText = "Click Power: " + clickPower;
-      document.getElementById("cpsStat").innerText = "Auto Click/sec: " + Math.floor(calculateAuto() / multiplier);
+      document.getElementById("cpsStat").innerText = "Auto Click/sec: " + autoClick;
       document.getElementById("multiplierStat").innerText = "Multiplier: x" + multiplier.toFixed(1);
       document.getElementById("prestigeStat").innerText = "Prestige Points: " + prestigePoints;
-      updateButtons();
-      if(score >= prestigeRequirement) document.getElementById("prestigeBtn").style.display = "inline-block";
-    }
 
-    function updateButtons() {
-      for(let key in upgrades){
-        let btn = document.getElementById(key);
-        btn.innerText = btn.innerText.split("(Cost:")[0]+"(Cost: "+upgrades[key].cost.toLocaleString()+")";
-        btn.classList.toggle("affordable", score >= (prestigeBoosts.cheaper ? Math.floor(upgrades[key].cost*0.8) : upgrades[key].cost));
+      // Update leaderboard
+      if(score > bestScore){
+        bestScore = score;
+        localStorage.setItem("bestScore", bestScore);
+      }
+      document.getElementById("bestScore").innerText = "Best Score: " + bestScore.toLocaleString();
+      document.getElementById("totalPrestige").innerText = "Total Prestige Points: " + totalPrestige;
+
+      // Show prestige button
+      if(score >= prestigeRequirement){
+        document.getElementById("prestigeBtn").style.display = "inline-block";
       }
     }
 
     function buyUpgrade(id){
-      let cost = prestigeBoosts.cheaper ? Math.floor(upgrades[id].cost*0.8) : upgrades[id].cost;
-      if(score >= cost){
-        score -= cost;
-        upgrades[id].effect();
-        upgrades[id].cost = Math.floor(upgrades[id].cost * 1.2);
+      let u = upgrades[id];
+      if(score >= u.cost){
+        score -= u.cost;
+        u.effect();
+        u.cost = Math.floor(u.cost * 1.2);
+        document.getElementById(id).innerText = document.getElementById(id).innerText.split("(Cost:")[0] + "(Cost: " + u.cost.toLocaleString() + ")";
         updateStats();
-      } else alert("Not enough points!");
-    }
-
-    function activateGolden(duration,strong=false){
-      if(goldenActive) return alert("Already active!");
-      goldenActive = true;
-      alert("🌟 Golden Clicks! " + (strong?"×50":"×10")+" active!");
-      setTimeout(()=>{ goldenActive=false; alert("Golden Clicks ended!"); }, prestigeBoosts.goldenLonger ? duration*2 : duration);
+      }
     }
 
     function prestige(){
       let gained = Math.floor(score / prestigeRequirement);
-      if(gained>0){
+      if(gained > 0){
         prestigePoints += gained;
-        multiplier = 1 + prestigePoints*0.5;
-        alert("🏆 You prestiged! Gained "+gained+" Prestige Points.\nMultiplier: x"+multiplier);
+        totalPrestige += gained;
+        multiplier = 1 + prestigePoints * 0.5;
+        localStorage.setItem("totalPrestige", totalPrestige);
       }
       score = 0;
-      clickPower = 1 + prestigeBoosts.clickBoost;
+      clickPower = 1;
       autoClick = 0;
       updateStats();
       document.getElementById("prestigeBtn").style.display = "none";
     }
 
-    function buyPrestigeUpgrade(id){
-      if(id===1 && prestigePoints>=5){ prestigePoints-=5; prestigeBoosts.clickBoost++; clickPower++; }
-      else if(id===2 && prestigePoints>=10){ prestigePoints-=10; prestigeBoosts.autoBoost++; }
-      else if(id===3 && prestigePoints>=20 && !prestigeBoosts.cheaper){ prestigePoints-=20; prestigeBoosts.cheaper=true; }
-      else if(id===4 && prestigePoints>=15 && !prestigeBoosts.goldenLonger){ prestigePoints-=15; prestigeBoosts.goldenLonger=true; }
-      else{ alert("Not enough Prestige Points or already bought!"); }
-      updateStats();
+    function resetLeaderboard(){
+      if(confirm("Are you sure you want to reset the leaderboard?")){
+        bestScore = 0;
+        totalPrestige = 0;
+        localStorage.setItem("bestScore", 0);
+        localStorage.setItem("totalPrestige", 0);
+        updateStats();
+      }
     }
 
     updateStats();
